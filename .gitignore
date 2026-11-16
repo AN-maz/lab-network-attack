@@ -1,0 +1,31 @@
+# Secrets / captured material that must never be committed
+*.enc
+*.pem
+*.key
+*.cap
+*.pcap
+cookies.txt
+.htpasswd
+.env
+.env.*
+
+# Generated lab artefacts
+*.log
+dns-*.log
+hasil-*.txt
+
+# Keep the report-authored transcripts and screenshots
+!docs/evidence/**/transcripts/*.txt
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Lab scratch output
+lab/out/
