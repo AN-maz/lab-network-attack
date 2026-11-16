@@ -46,10 +46,19 @@ if len(label) > 30 and re.fullmatch(r"[0-9a-fA-F]+", label):
 
 ## Result
 
-- The query appears in the resolver log; the detector prints it under
-  **"Query mencurigakan"** with its label length.
-- Decoding the label with `xxd -r -p` returns the original payload — the data
-  left the host and was reconstructed from DNS alone.
+Diukur di lab ini (kasus k10):
+
+- Query tercatat di log resolver (`exfil.lab: 2`). Detektor mencetak label
+  42 karakter di bawah **"Query mencurigakan"**:
+  `panjang=42  726168617369612d6e696c61692d7574732d6b3130.k10.exfil.lab`.
+- Decode dengan `xxd -r -p` mengembalikan payload asli
+  (`rahasia-nilai-uts-k10`) — data keluar dari host dan direkonstruksi murni
+  dari DNS.
+- Dua pengukuran penting: label hex dari NIM 11 digit hanya 22 karakter, jadi
+  **tidak** melewati ambang detektor (>30) — exfiltration nyata membawa data
+  besar, bukan satu NIM. Dan satu label DNS **maksimal 63 karakter**; hex
+  83 karakter ditolak `dig` dengan `is not a legal name (label too long)`,
+  yang menjelaskan kenapa exfiltration nyata memakai banyak query berurutan.
 
 ![Detector output on the resolver log](docs/evidence/07-dns-exfiltration/01-detect.png)
 ![Payload recovered from the query label](docs/evidence/07-dns-exfiltration/02-decode.png)

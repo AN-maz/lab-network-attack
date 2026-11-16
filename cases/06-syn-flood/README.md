@@ -38,10 +38,23 @@ docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml down -v
 
 ## Result
 
-- **Before:** `SYN_RECV` count is near zero — the normal state.
-- **During:** the count climbs rapidly. Each entry is a connection in the
-  half-open state: the kernel allocated a TCB and sent a SYN-ACK, but the
-  final ACK never came because the source address was spoofed.
+Diukur di lab ini (kasus k10):
+
+- **Sebelum:** `SYN_RECV` = **0**.
+- **Saat serangan:** `SYN_RECV` = **1**, padahal hping3 mengirim **~1.300.000
+  paket dalam 10 detik** (tcpdump melaporkan `1300885 packets captured`).
+- tcpdump menangkap aliran SYN bertubi-tubi dari hping3 dan, di antaranya,
+  handshake sah `Flags [S]` → `Flags [S.]` → `Flags [.]`.
+
+**Kenapa `SYN_RECV` tetap ~0?** Karena **SYN cookies aktif** di kernel
+(`/proc/sys/net/ipv4/tcp_syncookies = 1`), server tidak menyimpan TCB untuk
+koneksi half-open — state diencode ke sequence number SYN-ACK, jadi backlog
+(`tcp_max_syn_backlog = 512`) tidak bisa ditumpuk. Ini bukti mitigasi bekerja,
+bukan kegagalan serangan. `/proc/sys` read-only dari dalam container, jadi
+syncookies tidak bisa dimatikan tanpa `--privileged`.
+
+Untuk skenario "sebelum mitigasi" (backlog penuh, client sah ditolak), kernel
+harus dijalankan dengan `tcp_syncookies=0` di host.
 
 ![SYN_RECV before and during the flood](docs/evidence/06-syn-flood/01-syn-recv.png)
 ![tcpdump of SYN / SYN-ACK / ACK](docs/evidence/06-syn-flood/02-tcpdump-handshake.png)

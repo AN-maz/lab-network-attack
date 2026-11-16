@@ -43,12 +43,15 @@ for sent, received in ans:
 
 ## Result
 
-- The reply arrives with **ICMP type 0** (echo reply) — proof the target is up
-  and the request was crafted correctly.
-- The **TTL** in the reply (e.g. 64 on a directly reachable container) reveals
-  the sender's initial TTL minus the hops taken, which is how `traceroute`
-  estimates distance.
-- The `/24` sweep prints only the live hosts, silently skipping the rest.
+Diukur di lab ini (kasus k10):
+
+- Balasan datang dengan **ICMP type 0** (echo reply) dan **TTL 64** — bukti
+  target hidup dan paketnya terbentuk dengan benar.
+- TTL 64 = nilai TTL awal minus hop yang dilewati. Di network Docker yang sama
+  (tanpa router), hop = 0 sehingga TTL tetap 64. Inilah cara `traceroute`
+  memperkirakan jarak.
+- Sweep hanya mencetak host yang hidup (4 container di network itu, semuanya
+  `ttl=64 type=0`); alamat lain dilewati tanpa noise.
 
 ![ICMP reply with TTL and type](docs/evidence/05-icmp-scapy/01-icmp-reply.png)
 ![Subnet sweep listing live hosts](docs/evidence/05-icmp-scapy/02-subnet-scan.png)

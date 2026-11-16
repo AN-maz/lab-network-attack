@@ -34,10 +34,15 @@ docker run --rm -v "$PWD":/work uts-openssl sh -c '
 
 ## Result
 
-- The two SHA-256 digests — plaintext before encryption and the decrypted
-  round-trip — are **identical**, so the ciphertext decrypts losslessly.
-- `openssl x509` reports `subject=CN = k10.uts.local`, `issuer=CN = k10.uts.local`
-  (self-signed: signer equals subject) and the 30-day validity window.
+Diukur di lab ini (kasus k10):
+
+- Kedua digest SHA-256 — plaintext sebelum enkripsi dan hasil dekripsi —
+  **identik**: `9380747e3287df06dd3de21689d77100edba5e21676683acaf5f4bca3628aff4`.
+  Jadi ciphertext terdekripsi tanpa kehilangan data.
+- `openssl x509` melaporkan `subject=CN = k10.uts.local`,
+  `issuer=CN = k10.uts.local` (self-signed: penanda tangan = subjek), dengan
+  masa berlaku 30 hari (`notBefore=Nov 16 07:32:41 2026 GMT`,
+  `notAfter=Dec 16 07:32:41 2026 GMT`).
 
 ![AES round-trip hashes match](docs/evidence/02-cryptography/01-aes-roundtrip.png)
 ![Certificate subject/issuer/dates](docs/evidence/02-cryptography/02-certificate.png)

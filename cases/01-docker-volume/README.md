@@ -27,8 +27,8 @@ docker compose -p k10 -f lab/b1-compose/docker-compose.yml down -v
 
 ## Result
 
-- The file written by container `w-k10` is still readable **after** `w-k10` is
-  deleted — the volume, not the container, owns the data.
+- Isi file `laporan-k10.txt` (`19552011024`) masih terbaca **setelah** container
+  `w-k10` dihapus — volume, bukan container, yang memiliki data.
 - From the `attacker` container, `wget http://target` returns the nginx default
   page, proving the two containers share an isolated bridge network and can
   reach each other by service name.

