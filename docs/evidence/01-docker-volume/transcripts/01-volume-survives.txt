@@ -1,0 +1,8 @@
+==============================================
+KASUS 1 — Docker dan volume
+==============================================
+vol-k9
+--- hapus container w-k9 ---
+w-k9
+--- baca lewat container BARU (data harus masih ada) ---
+24552011027

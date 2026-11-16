@@ -45,7 +45,9 @@ docker exec korban-k9 arp -a
   An ARP reply from the attacker no longer overwrites it while the process
   holds, because a static entry is not updated by unsolicited replies.
 
-![Static ARP entry restored](docs/evidence/03-arp-spoofing/01-static-arp.png)
+![ARP table before the attack](docs/evidence/03-arp-spoofing/00-before.png)
+![ARP table during poisoning](docs/evidence/03-arp-spoofing/01-poisoned.png)
+![ARP table with static entry](docs/evidence/03-arp-spoofing/02-static-arp.png)
 
 ## Why it matters
 
