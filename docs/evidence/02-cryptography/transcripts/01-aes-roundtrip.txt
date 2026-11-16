@@ -1,7 +1,0 @@
-==============================================
-KASUS 2 — Kriptografi (AES + sertifikat)
-==============================================
---- hash plaintext ---
-4bd9129aa11a7d2d2296b1e0ec1120dd9d8d929b789375edf87198a475162a93  laporan-k9.txt
---- hash hasil dekripsi (HARUS SAMA) ---
-4bd9129aa11a7d2d2296b1e0ec1120dd9d8d929b789375edf87198a475162a93  hasil-k9.txt
