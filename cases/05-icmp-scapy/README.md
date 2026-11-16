@@ -7,14 +7,14 @@ reply, and connect the result to the smurf amplification attack.
 
 | Parameter | Value |
 |---|---|
-| Network | `lab-arp-k10` |
-| Target | `korban-k10` (`<ip-korban>`) |
+| Network | `lab-arp-k9` |
+| Target | `korban-k9` (`<ip-korban>`) |
 | Script | `kirim_icmp.py` |
 
 ## Method
 
 ```bash
-docker run --rm --network lab-arp-k10 \
+docker run --rm --network lab-arp-k9 \
   -v "$PWD/lab/kasus/k5-scapy:/work" uts-kali-tools \
   python3 /work/kirim_icmp.py <ip-korban>
 ```
@@ -43,15 +43,16 @@ for sent, received in ans:
 
 ## Result
 
-Diukur di lab ini (kasus k10):
+Diukur di lab ini (kasus k9):
 
 - Balasan datang dengan **ICMP type 0** (echo reply) dan **TTL 64** — bukti
   target hidup dan paketnya terbentuk dengan benar.
 - TTL 64 = nilai TTL awal minus hop yang dilewati. Di network Docker yang sama
   (tanpa router), hop = 0 sehingga TTL tetap 64. Inilah cara `traceroute`
   memperkirakan jarak.
-- Sweep hanya mencetak host yang hidup (4 container di network itu, semuanya
-  `ttl=64 type=0`); alamat lain dilewati tanpa noise.
+- Sweep menemukan **3 host hidup** (`172.18.0.2`, `.3`, `.4` — korban,
+  gateway, penyerang), semuanya `ttl=64 type=0`; alamat lain dilewati tanpa
+  noise.
 
 ![ICMP reply with TTL and type](docs/evidence/05-icmp-scapy/01-icmp-reply.png)
 ![Subnet sweep listing live hosts](docs/evidence/05-icmp-scapy/02-subnet-scan.png)

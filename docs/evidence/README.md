@@ -34,10 +34,13 @@ kamu mau gambar rapi dengan semua ukuran sama:
 
 ```bash
 ./lab/shot.sh cases/06-syn-flood <<'CMDS'
-docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml up -d
-docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml exec target netstat -ant | grep -c SYN_RECV
+docker-compose -p k9 -f lab/b/b3-syn-flood/docker-compose.yml up -d
+docker-compose -p k9 -f lab/b/b3-syn-flood/docker-compose.yml exec target netstat -ant | grep -c SYN_RECV
 CMDS
 ```
+
+> **Pakai `docker-compose` (tanda hubung)**, bukan `docker compose` — plugin
+> `docker compose` tidak terpasang di laptop ini dan perintahnya akan error.
 
 Script akan menulis `cases/06-syn-flood/transcript.txt` — pindahkan PNG hasilnya
 ke path di tabel bawah.

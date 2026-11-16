@@ -8,27 +8,27 @@ volume is the difference between leftover data and a leak.
 
 | Parameter | Value |
 |---|---|
-| Volume | `vol-k10` |
-| File | `laporan-k10.txt` |
-| Compose project | `k10` |
+| Volume | `vol-k9` |
+| File | `laporan-k9.txt` |
+| Compose project | `k9` |
 
 ## Method
 
 ```bash
-docker volume create vol-k10
-docker run --name w-k10 -v vol-k10:/data alpine sh -c 'echo 19552011024 > /data/laporan-k10.txt'
-docker rm w-k10
-docker run --rm -v vol-k10:/data alpine cat /data/laporan-k10.txt
+docker volume create vol-k9
+docker run --name w-k9 -v vol-k9:/data alpine sh -c 'echo 24552011027 > /data/laporan-k9.txt'
+docker rm w-k9
+docker run --rm -v vol-k9:/data alpine cat /data/laporan-k9.txt
 
-docker compose -p k10 -f lab/b1-compose/docker-compose.yml up -d
-docker compose -p k10 -f lab/b1-compose/docker-compose.yml exec attacker wget -qO- http://target
-docker compose -p k10 -f lab/b1-compose/docker-compose.yml down -v
+docker compose -p k9 -f lab/b1-compose/docker-compose.yml up -d
+docker compose -p k9 -f lab/b1-compose/docker-compose.yml exec attacker wget -qO- http://target
+docker compose -p k9 -f lab/b1-compose/docker-compose.yml down -v
 ```
 
 ## Result
 
-- Isi file `laporan-k10.txt` (`19552011024`) masih terbaca **setelah** container
-  `w-k10` dihapus — volume, bukan container, yang memiliki data.
+- Isi file `laporan-k9.txt` (`24552011027`) masih terbaca **setelah** container
+  `w-k9` dihapus — volume, bukan container, yang memiliki data.
 - From the `attacker` container, `wget http://target` returns the nginx default
   page, proving the two containers share an isolated bridge network and can
   reach each other by service name.
@@ -58,5 +58,5 @@ are the whole control.
 
 | File | Shows |
 |---|---|
-| `01-volume-survives.png` | `cat` succeeding after `docker rm w-k10` |
+| `01-volume-survives.png` | `cat` succeeding after `docker rm w-k9` |
 | `02-attacker-to-target.png` | nginx page served to the `attacker` container |

@@ -4,7 +4,7 @@
 #
 # Pakai:
 #   ./lab/shot.sh <nama-output> <<'CMDS'
-#   docker compose -p k10 -f lab/b3-syn-flood/docker-compose.yml up -d
+#   docker compose -p k9 -f lab/b3-syn-flood/docker-compose.yml up -d
 #   ...
 #   CMDS
 #

@@ -8,30 +8,30 @@ static ARP entry.
 
 | Parameter | Value |
 |---|---|
-| Network | `lab-arp-k10` |
-| Victim | `korban-k10` |
-| Gateway | `gateway-k10` |
-| Attacker | `penyerang-k10` |
+| Network | `lab-arp-k9` |
+| Victim | `korban-k9` |
+| Gateway | `gateway-k9` |
+| Attacker | `penyerang-k9` |
 
 ## Method
 
 ```bash
-docker network create lab-arp-k10
-docker run -d --name korban-k10   --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools
-docker run -d --name gateway-k10  --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools
-docker run -d --name penyerang-k10 --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools
+docker network create lab-arp-k9
+docker run -d --name korban-k9   --network lab-arp-k9 --cap-add NET_ADMIN uts-kali-tools
+docker run -d --name gateway-k9  --network lab-arp-k9 --cap-add NET_ADMIN uts-kali-tools
+docker run -d --name penyerang-k9 --network lab-arp-k9 --cap-add NET_ADMIN uts-kali-tools
 
 # Baseline
-docker inspect -f '{{.NetworkSettings.Networks.lab-arp-k10.IPAddress}}' korban-k10 gateway-k10
-docker exec korban-k10 arp -a
+docker inspect -f '{{.NetworkSettings.Networks.lab-arp-k9.IPAddress}}' korban-k9 gateway-k9
+docker exec korban-k9 arp -a
 
 # Poison
-docker exec -d penyerang-k10 timeout 20 arpspoof -i eth0 -t <ip-korban> <ip-gateway>
-docker exec korban-k10 arp -a
+docker exec -d penyerang-k9 timeout 20 arpspoof -i eth0 -t <ip-korban> <ip-gateway>
+docker exec korban-k9 arp -a
 
 # Mitigate: pin the real gateway MAC
-docker exec korban-k10 arp -s <ip-gateway> $(docker exec gateway-k10 cat /sys/class/net/eth0/address)
-docker exec korban-k10 arp -a
+docker exec korban-k9 arp -s <ip-gateway> $(docker exec gateway-k9 cat /sys/class/net/eth0/address)
+docker exec korban-k9 arp -a
 ```
 
 ## Result

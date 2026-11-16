@@ -13,6 +13,8 @@ cookies.txt
 *.log
 dns-*.log
 hasil-*.txt
+laporan-*.txt
+wordlist-*.txt
 
 # Keep the report-authored transcripts and screenshots
 !docs/evidence/**/transcripts/*.txt

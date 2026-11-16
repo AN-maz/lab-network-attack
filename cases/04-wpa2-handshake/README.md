@@ -8,14 +8,14 @@ handshake is crackable at all.
 
 | Parameter | Value |
 |---|---|
-| Capture | `handshake-k10.cap` |
-| Wordlist | `wordlist-k10.txt` |
+| Capture | `handshake-k9.cap` |
+| Wordlist | `wordlist-k9.txt` |
 
 ## Method
 
 ```bash
 docker run --rm -v "$PWD":/work uts-kali-tools \
-  aircrack-ng -w wordlist-k10.txt handshake-k10.cap
+  aircrack-ng -w wordlist-k9.txt handshake-k9.cap
 ```
 
 ## Result
