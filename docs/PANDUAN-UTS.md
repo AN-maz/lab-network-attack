@@ -10,6 +10,17 @@ diubah.
 
 ## Perbedaan dari soal asli (PENTING — baca dulu)
 
+> **SHELL-MU FISH — baca ini kalau error `Unsupported use of '='`:**
+> Perintah `VAR=$(cmd)` di bawah adalah sintaks **bash**. Fish menolaknya. Ada
+> dua cara aman:
+> 1. **Jangan ketik manual** — jalankan skripnya, yang otomatis pakai bash:
+>    `./lab/uts-run.sh 1` … `7`
+> 2. Kalau mau ketik manual di fish, pakai `set VAR (cmd)` (bukan `VAR=$(cmd)`).
+>    Versi lengkap per kasus dalam sintaks fish ada di
+>    **`docs/PANDUAN-UTS-FISH.md`**.
+>    Alternatif: ketik `bash` dulu di prompt, lalu semua perintah di panduan ini
+>    jalan apa adanya.
+
 Soal asli ditulis untuk `docker compose` (plugin) dan `docker-compose`.
 Laptop ini **tidak punya plugin `docker compose`** — yang terpasang adalah
 binary standalone **`docker-compose` v5.7.0** di `/usr/local/bin/docker-compose`.
